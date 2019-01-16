@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="">
+    <head>
+        <meta charset="utf-8">
+        <meta name="referrer" content="same-origin">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        
+        <title> </title>
+        
+        <meta name="description" content=" ">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="icon" href="data:,">
+        
+        <link crossorigin="anonymous" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.2.1/dist/css/bootstrap.min.css">
+        <link crossorigin="anonymous" rel="stylesheet" href="./loader.css">
+        
+        <script src="./octokit-rest.js"></script>
+
+        <script type=module>
+        
+        import {html, render} from 'https://unpkg.com/htm@2.0.0/preact/standalone.mjs'
+        import {createStore} from './createCoolerReduxStore.js'
+
+        import GithubProjectsChoser from './components/GithubProjectChoser.js'
+        import SourceGithubProjectPreview from './components/SourceGithubProjectPreview.js'
+        import DestinationGithubProjectPreview from './components/DestinationGithubProjectPreview.js'
+        import CardCopyPreparer from './components/CardCopyPreparer.js'
+        
+        import mutations from './mutations.js'
+        import _actions from './actions.js'
+
+
+        const store = createStore(
+            mutations, 
+            {
+                domain: undefined, // can be {org: string} or {owner: string, repo: string}
+                projects: undefined, // array of project objects
+                columnsByProject: undefined, // WeakMap<Project, Column[]>
+                cardsByColumn: undefined, // WeakMap<Column, Card[]>
+
+                sourceProject: undefined,
+                destinationProject: undefined,
+                sourceColumns: undefined,
+                destinationColumn: undefined,
+                cardsToCopy: undefined,
+
+                projectsStatus: undefined, // {pending, error}
+                //sourceColumnsStatus: undefined, // {pending, error}
+                //destinationColumnStatus: undefined, // {pending, error}
+            }
+        )
+
+        const actions = _actions(store);
+        
+        store.subscribe(() => {
+            const {projects, columnsByProject = new WeakMap(), sourceProject, destinationProject, cardsByColumn} = store.getState();
+
+            render(
+                GithubProjectsChoser({
+                    projects,
+                    onSourceChange(source){
+                        actions.setSourceProject(source, columnsByProject)
+                    },
+                    onDestinationChange(destination){
+                        actions.setDestinationProject(destination, columnsByProject)
+                    }
+                }),
+                document.body.querySelector('.projects .render')
+            )
+
+            render(
+                SourceGithubProjectPreview({
+                    columns: columnsByProject.get(sourceProject),
+                    onColumnsSelection(cols){
+                        actions.setSourceColumns(cols, cardsByColumn)
+                    }
+                }),
+                document.body.querySelector('.source-columns .render')
+            )
+
+            render(
+                DestinationGithubProjectPreview({
+                    columns: columnsByProject.get(destinationProject),
+                    onColumnSelection(destinationColumn){
+                        store.dispatch.setDestinationColumn({destinationColumn})
+                    }
+                }),
+                document.body.querySelector('.destination-columns .render')
+            )
+
+            render(
+                CardCopyPreparer(store.getState()),
+                document.body.querySelector('.outcome')
+            )
+        })
+
+
+        console.info('Initialization');
+        store.dispatch.setDomain({domain: {owner: 'DavidBruant', repo: 'Bouture'}})
+
+        fetch('./token.json').then(r => r.json())
+        .then(({token}) => actions.token = token)
+        .then(() => {
+            const {domain} = store.getState();
+            const {getProjects} = actions;
+
+            getProjects(domain)
+        })
+
+
+        /*throw `TODO:
+        - Work on source columns selection
+        - Work on destination column selection
+        - (gather cards to copy) Build summary message
+        `*/
+
+
+        </script>
+
+        <style>
+            .select{
+                display: flex;
+                flex-direction: row;
+                justify-content: space-around;
+            }
+        </style>
+
+    </head>
+    <body>
+        <div class="select">
+            <section class="projects">
+                <h1>Choose source and destination projects</h1>
+
+                <!--
+                    <div class="loader"></div>
+                -->
+
+                <div class="render"></div>
+            </section>
+            <section class="source-columns">
+                <h1>Choose Source columns</h1>
+                <div class="render"></div>
+            </section>
+            <section class="destination-columns">
+                <h1>Choose Destination column</h1>
+                <div class="render"></div>
+            </section>
+        </div>
+        <div class="outcome"></div>
+
+    </body>
+</html>
