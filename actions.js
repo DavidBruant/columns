@@ -71,12 +71,19 @@ export default function({dispatch, getState}){
 
         setSourceColumns(sourceColumns){
             dispatch.setSourceColumns({sourceColumns})
+
+            const {cardsByColumn = new WeakMap()} = getState();
             
             const cardsPs = Promise.all(sourceColumns.map(column => {
-                return octokit.projects.getProjectCards({column_id: column.id, per_page: 100})
-                .then(({data: cards}) => {
-                    dispatch.addColumnCards({column, cards})
-                })
+                if(!cardsByColumn.has(column)){
+                    return octokit.projects.getProjectCards({column_id: column.id, per_page: 100})
+                    .then(({data: cards}) => {
+                        dispatch.setColumnCards({column, cards})
+                    })
+                }
+                else
+                    return Promise.resolve(true);
+
             }))
             .then(() => {
                 const {sourceColumns, cardsByColumn} = getState()
@@ -89,6 +96,26 @@ export default function({dispatch, getState}){
 
                 dispatch.setCardsToCopy({cardsToCopy})
             })
+        },
+
+        transfer(destinationColumn, cardsToCopy){
+            const column_id = destinationColumn.id;
+
+            return Promise.all(cardsToCopy.map(card => {
+                if(card.note)
+                    return octokit.projects.createProjectCard({ column_id, note: card.note })
+                else{
+                    return fetch(card.content_url)
+                        .then(r => r.json())
+                        .then(({id: content_id}) => {
+                            return octokit.projects.createProjectCard({
+                                column_id, 
+                                content_id,
+                                content_type: card.content_url.includes('issue') ? 'Issue' : 'PullRequest'
+                            })
+                        })
+                }
+            }))
         }
     }
 }

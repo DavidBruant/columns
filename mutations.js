@@ -87,13 +87,9 @@ export default {
             { columnsByProject }
         )
     },
-    addColumnCards(state, {column, cards}){
+    setColumnCards(state, {column, cards}){
         const cardsByColumn = state.cardsByColumn || new WeakMap()
-        let columnCards = cardsByColumn.get(column) || [];
-
-        columnCards = columnCards.concat(cards);
-
-        cardsByColumn.set(column, columnCards)
+        cardsByColumn.set(column, cards)
 
         return Object.assign(
             state,

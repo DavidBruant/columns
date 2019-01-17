@@ -13,7 +13,7 @@ export default function DestinationGithubProjectPreview({columns=[], onColumnSel
                 <tbody>
                     ${ columns.map(c => html`
                         <tr>
-                            <td><input type="radio" name="destination" onChange=${c => {onColumnSelection(c)}}/></td>
+                            <td><input type="radio" name="destination" onChange=${e => {onColumnSelection(c)}}/></td>
                             <td>${ c.name }</td>
                         </tr>
                     `)

@@ -89,14 +89,17 @@
             )
 
             render(
-                CardCopyPreparer(store.getState()),
+                CardCopyPreparer(store.getState(), (destinationColumn, cardsToCopy) => {
+                    actions.transfer(destinationColumn, cardsToCopy)
+                }),
                 document.body.querySelector('.outcome')
             )
         })
 
 
         console.info('Initialization');
-        store.dispatch.setDomain({domain: {owner: 'DavidBruant', repo: 'Bouture'}})
+        //store.dispatch.setDomain({domain: {owner: 'DavidBruant', repo: 'columns'}})
+        store.dispatch.setDomain({domain: {org: 'entrepreneur-interet-general'}})
 
         fetch('./token.json').then(r => r.json())
         .then(({token}) => actions.token = token)
@@ -106,14 +109,6 @@
 
             getProjects(domain)
         })
-
-
-        /*throw `TODO:
-        - Work on source columns selection
-        - Work on destination column selection
-        - (gather cards to copy) Build summary message
-        `*/
-
 
         </script>
 
