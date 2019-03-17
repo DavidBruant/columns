@@ -19,7 +19,7 @@
         <script type=module>
         
         import {html, render} from 'https://unpkg.com/htm@2.0.0/preact/standalone.mjs'
-        import {createStore} from './createCoolerReduxStore.js'
+        import Store from 'https://cdn.jsdelivr.net/gh/DavidBruant/baredux@master/main.js'
 
         import GithubProjectsChoser from './components/GithubProjectChoser.js'
         import SourceGithubProjectPreview from './components/SourceGithubProjectPreview.js'
@@ -29,10 +29,8 @@
         import mutations from './mutations.js'
         import _actions from './actions.js'
 
-
-        const store = createStore(
-            mutations, 
-            {
+        const store = new Store({
+            state: {
                 domain: undefined, // can be {org: string} or {owner: string, repo: string}
                 projects: undefined, // array of project objects
                 columnsByProject: undefined, // WeakMap<Project, Column[]>
@@ -47,13 +45,14 @@
                 projectsStatus: undefined, // {pending, error}
                 //sourceColumnsStatus: undefined, // {pending, error}
                 //destinationColumnStatus: undefined, // {pending, error}
-            }
-        )
+            },
+            mutations
+        })
 
         const actions = _actions(store);
         
-        store.subscribe(() => {
-            const {projects, columnsByProject = new WeakMap(), sourceProject, destinationProject, cardsByColumn} = store.getState();
+        store.subscribe(state => {
+            const {projects, columnsByProject = new WeakMap(), sourceProject, destinationProject, cardsByColumn} = state;
 
             render(
                 GithubProjectsChoser({
@@ -82,14 +81,14 @@
                 DestinationGithubProjectPreview({
                     columns: columnsByProject.get(destinationProject),
                     onColumnSelection(destinationColumn){
-                        store.dispatch.setDestinationColumn({destinationColumn})
+                        store.mutations.setDestinationColumn({destinationColumn})
                     }
                 }),
                 document.body.querySelector('.destination-columns .render')
             )
 
             render(
-                CardCopyPreparer(store.getState(), (destinationColumn, cardsToCopy) => {
+                CardCopyPreparer(store.state, (destinationColumn, cardsToCopy) => {
                     actions.transfer(destinationColumn, cardsToCopy)
                 }),
                 document.body.querySelector('.outcome')
@@ -98,13 +97,13 @@
 
 
         console.info('Initialization');
-        //store.dispatch.setDomain({domain: {owner: 'DavidBruant', repo: 'columns'}})
-        store.dispatch.setDomain({domain: {org: 'entrepreneur-interet-general'}})
+        //store.mutations.setDomain({domain: {owner: 'DavidBruant', repo: 'columns'}})
+        store.mutations.setDomain({domain: {org: 'entrepreneur-interet-general'}})
 
         fetch('./token.json').then(r => r.json())
         .then(({token}) => actions.token = token)
         .then(() => {
-            const {domain} = store.getState();
+            const {domain} = store.state;
             const {getProjects} = actions;
 
             getProjects(domain)

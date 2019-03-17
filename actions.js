@@ -1,4 +1,4 @@
-export default function({dispatch, getState}){
+export default function(store){
 
     let octokit;
 
@@ -28,57 +28,57 @@ export default function({dispatch, getState}){
                 projectsP = octokit.projects.getRepoProjects({owner, repo, state: 'all', per_page: 100})
             }
 
-            dispatch.projectsStatus.setPending({pending: projectsP})
+            store.mutations.projectsStatus.setPending({pending: projectsP})
 
             projectsP
-            .then(({data: projects}) => { dispatch.setProjects({projects}) })
+            .then(({data: projects}) => { store.mutations.setProjects({projects}) })
             .catch(error => { 
                 console.error('getprojects', error)    
-                dispatch.projectsStatus.setError({error})
+                store.mutations.projectsStatus.setError({error})
             })
         },
 
         setSourceProject(sourceProject, columnsByProject){
-            dispatch.setSourceProject({sourceProject})
+            store.mutations.setSourceProject({sourceProject})
 
             if(!columnsByProject.has(sourceProject)){
                 const colsP = octokit.projects.getProjectColumns({project_id: sourceProject.id, per_page:100})
 
-                dispatch.sourceColumnsStatus.setPending({pending: colsP})
+                store.mutations.sourceColumnsStatus.setPending({pending: colsP})
 
                 colsP
                 .then(({data: columns}) => {
-                    console.log('dispatch.addProjectColumns', sourceProject, columns)
-                    dispatch.addProjectColumns({project: sourceProject, columns}) 
+                    console.log('store.mutations.addProjectColumns', sourceProject, columns)
+                    store.mutations.addProjectColumns({project: sourceProject, columns}) 
                 })
-                .catch(error => dispatch.sourceColumnsStatus.setError({error}))
+                .catch(error => store.mutations.sourceColumnsStatus.setError({error}))
             }
         },
 
         setDestinationProject(destinationProject, columnsByProject){
-            dispatch.setDestinationProject({destinationProject})
+            store.mutations.setDestinationProject({destinationProject})
 
             if(!columnsByProject.has(destinationProject)){
                 const colsP = octokit.projects.getProjectColumns({project_id: destinationProject.id, per_page:100})
 
-                dispatch.destinationColumnStatus.setPending({pending: colsP})
+                store.mutations.destinationColumnStatus.setPending({pending: colsP})
 
                 colsP
-                .then(({data: columns}) => dispatch.addProjectColumns({project: destinationProject, columns}) )
-                .catch(error => dispatch.destinationColumnStatus.setError({error}))
+                .then(({data: columns}) => store.mutations.addProjectColumns({project: destinationProject, columns}) )
+                .catch(error => store.mutations.destinationColumnStatus.setError({error}))
             }
         },
 
         setSourceColumns(sourceColumns){
-            dispatch.setSourceColumns({sourceColumns})
+            store.mutations.setSourceColumns({sourceColumns})
 
-            const {cardsByColumn = new WeakMap()} = getState();
+            const {cardsByColumn = new WeakMap()} = store.state;
             
             const cardsPs = Promise.all(sourceColumns.map(column => {
                 if(!cardsByColumn.has(column)){
                     return octokit.projects.getProjectCards({column_id: column.id, per_page: 100})
                     .then(({data: cards}) => {
-                        dispatch.setColumnCards({column, cards})
+                        store.mutations.setColumnCards({column, cards})
                     })
                 }
                 else
@@ -86,7 +86,7 @@ export default function({dispatch, getState}){
 
             }))
             .then(() => {
-                const {sourceColumns, cardsByColumn} = getState()
+                const {sourceColumns, cardsByColumn} = store.state
 
                 let cardsToCopy = []
 
@@ -94,7 +94,7 @@ export default function({dispatch, getState}){
                     cardsToCopy = [...cardsToCopy, ...cardsByColumn.get(col)]
                 }
 
-                dispatch.setCardsToCopy({cardsToCopy})
+                store.mutations.setCardsToCopy({cardsToCopy})
             })
         },
 
